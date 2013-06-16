@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+# 
+# Benchmark for Viscacha
+# 
+require 'rubygems'
+require 'bundler/setup'
+require 'pathname'
+require 'benchmark/ips'
+
+require 'viscacha/store'
+require 'active_support/cache/dalli_store'
+require 'active_support/cache/mem_cache_store'
+require 'active_support/cache/memory_store'
+
+CACHE_PATH = Pathname('bench.lpc')
+CACHE_PATH.delete if CACHE_PATH.exist?
+
+DATA = { foo:12.34, bar:56, qux:nil }
+# DATA = (0..5_000).to_a.join(',')
+
+CACHES = {
+  viscacha:     Viscacha::Store.new(filename:CACHE_PATH),
+  memcache:     ActiveSupport::Cache::MemCacheStore.new,
+  dalli:        ActiveSupport::Cache::DalliStore.new,
+  dalli_r:      ActiveSupport::Cache::DalliStore.new('kitekat.local:11211'),
+  memory_store: ActiveSupport::Cache::MemoryStore.new
+}
+
+Benchmark.ips do |x|
+  CACHES.each_pair do |name,cache|
+    x.report("#{name} miss")  { cache.fetch(rand(10_000_000).to_s) { DATA } }
+    x.report("#{name} hit")   { cache.fetch('foo') { DATA } }
+  end
+end

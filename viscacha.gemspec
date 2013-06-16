@@ -1,11 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'lmc/store/version'
+require 'viscacha/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "lmc-store"
-  spec.version       = Lmc::Store::VERSION
+  spec.name          = "viscacha"
+  spec.version       = Viscacha::VERSION
   spec.authors       = ["Julien Letessier"]
   spec.email         = ["julien.letessier@gmail.com"]
   spec.description   = %q{Shared memory cache for ActiveSupport, leveraging the localmemcache gem.}
