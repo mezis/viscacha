@@ -15,20 +15,24 @@ require 'active_support/cache/memory_store'
 # CACHE_PATH = Pathname('bench.lmc')
 # CACHE_PATH.delete if CACHE_PATH.exist?
 
+SIZE = 64.megabytes
+DATA = SecureRandom.random_bytes(25.kilobytes)
 # DATA = { foo:12.34, bar:56, qux:nil }
-DATA = (0..5_000).to_a.join(',')
+SLOTS = SIZE / Marshal.dump(DATA).bytesize
+
 
 CACHES = {
-  viscacha:     Viscacha::Store.new(name:'bench', directory:'.').clear,
-  memcache:     ActiveSupport::Cache::MemCacheStore.new(size: 64.megabytes),
-  dalli:        ActiveSupport::Cache::DalliStore.new,
-  dalli_r:      ActiveSupport::Cache::DalliStore.new('kitekat.local:11211'),
-  memory_store: ActiveSupport::Cache::MemoryStore.new(size: 64.megabytes)
+  viscacha: Viscacha::Store.new(name:'bench', directory:'.', size: 64.megabytes),
+  memcache: ActiveSupport::Cache::MemCacheStore.new(size: 64.megabytes),
+  dalli:    ActiveSupport::Cache::DalliStore.new,
+  dalli_r:  ActiveSupport::Cache::DalliStore.new('kitekat.local:11211'),
+  memory:   ActiveSupport::Cache::MemoryStore.new(size: 64.megabytes)
 }
 
 Benchmark.ips do |x|
   CACHES.each_pair do |name,cache|
-    x.report("#{name} miss")  { cache.fetch(rand(10_000_000).to_s) { DATA } }
-    x.report("#{name} hit")   { cache.fetch('foo') { DATA } }
+    x.report("#{name} 100% miss") { cache.fetch(rand(10_000_000).to_s, compress:false) { DATA } }
+    x.report("#{name} 100%  hit") { cache.fetch('foo',                 compress:false) { DATA } }
+    x.report("#{name}  50%  hit") { cache.fetch(rand(SLOTS * 2).to_s,  compress:false) { DATA } }
   end
 end
