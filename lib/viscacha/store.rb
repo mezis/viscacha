@@ -51,11 +51,6 @@ module Viscacha
       raise NotImplementedError.new("#{self.class.name} does not support #{__method__}")
     end
 
-    def used_at(key)
-      meta = meta_store[key]
-      return nil if meta.nil? || meta.empty?
-      meta.unpack('GGNC').first
-    end
 
     protected
 
