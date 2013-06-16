@@ -3,19 +3,19 @@ require 'viscacha/store'
 require 'pathname'
 
 describe Viscacha::Store do
-  def cache_file_path
-    @cache_file_path ||= Pathname.new("test.#{$$}.lmc")
-  end
-  def remove_cache_file
-    return unless cache_file_path.exist?
-    cache_file_path.delete
-  end
+  # def cache_file_path
+  #   @cache_file_path ||= Pathname.new("tmp/test.#{$$}.lmc")
+  # end
+  # def remove_cache_file
+  #   return unless cache_file_path.exist?
+  #   cache_file_path.delete
+  # end
 
-  before { remove_cache_file }
-  after  { remove_cache_file }
+  # before { remove_cache_file }
+  # after  { remove_cache_file }
 
   describe 'cache behaviour' do
-    subject { described_class.new filename:cache_file_path }
+    subject { described_class.new directory:'tmp', name:$$ }
     before  { subject.clear }
 
     describe 'read/write/delete' do
@@ -88,32 +88,40 @@ describe Viscacha::Store do
 
 
   describe 'eviction' do
-    subject { described_class.new filename:cache_file_path, size:1 }
-    
-    xit 'evicts items' do
-      11.times do |time|
-        subject.write time.to_s, ("x" * 128.kilobytes)
-      end
+    def blob(size_mb)
+      SecureRandom.random_bytes(size_mb.megabytes)
     end
 
-    xit 'evicts the oldest item' do
+    subject { described_class.new directory:'tmp', name:$$, size:16.megabytes }
+
+    it 'evicts items' do
+      16.times do |index|
+        subject.write(index.to_s, blob(1))
+      end
+
+      # backend = subject.send(:meta_store)
+      # backend = subject.send(:data_store)
+      # require 'pry' ; require 'pry-nav' ; binding.pry
+    end
+
+    it 'evicts the oldest item' do
       subject.write('foo', 'bar')
-      10.times do |time|
-        subject.write time.to_s, ("x" * 128.kilobytes)
-      end      
+      16.times do |index|
+        subject.write(index.to_s, blob(1))
+      end
 
       subject.read('foo').should be_nil
     end
 
-    xit 'evicts the least recently used item' do
-      subject.write '1', ('x' * 256.kilobytes)
-      subject.write '2', ('x' * 256.kilobytes)
-      subject.write '3', ('x' * 256.kilobytes)
+    it 'evicts the least recently used item' do
+      subject.write '1', blob(4)
+      subject.write '2', blob(4)
+      subject.write '3', blob(4)
       subject.read '1'
-      subject.write '4', ("x" * 256.kilobytes)
+      subject.write '4', blob(4)
 
-      subject.read("1").should_not be_nil
-      subject.read("2").should be_nil
+      subject.read("1").class.should eq(String)
+      subject.read("2").class.should eq(NilClass)
     end
   end
 

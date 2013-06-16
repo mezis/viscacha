@@ -17,7 +17,8 @@ module Viscacha
 
       data_store_options = {
         filename: Pathname.new(directory).join("#{name}-data.lmc").to_s,
-        size_mb:  size / 1.megabyte
+        # size_mb:  [DEFAULT_SIZE, size].max / 1.megabyte
+        size_mb:  [DEFAULT_SIZE, size].max / 1.megabyte
       }
       meta_store_options = {
         filename: Pathname.new(directory).join("#{name}-meta.lmc").to_s,
@@ -28,14 +29,10 @@ module Viscacha
       @meta_store = LocalMemCache.new(meta_store_options)
     end
 
-    def close
-      @data_store.close
-      @meta_store.close
-    end
-
     def clear(options = nil)
-      data_store.keys.each { |k| data_store[k] = nil }
-      meta_store.keys.each { |k| meta_store[k] = nil }
+      data_store.clear
+      meta_store.clear
+      self
     end
 
     def prune(options = nil)
@@ -61,28 +58,47 @@ module Viscacha
       data = data_store[key]
       meta = meta_store[key]
       return nil if data.nil? || meta.nil? || data.empty? || meta.empty?
-      metadata_unpack(meta, data)
+      entry = metadata_unpack(meta, data)
+      touch_entry(entry, key)
+      entry
     end
 
-    def write_entry(key, entry, options = {}) 
+    def write_entry(key, entry, options = {})
+      make_space_for(entry.raw_value.bytesize)
       data_store[key] = entry.raw_value
       meta_store[key] = metadata_pack(entry)
+      true
+    rescue LocalMemCache::MemoryPoolFull
+      # require 'pry' ; require 'pry-nav' ; binding.pry
+      puts '[viscacha] memory pool full, flushing?'
     end
 
     def delete_entry(key, options = {})
       data = data_store[key]
-      data_store[key] = nil
-      meta_store[key] = nil
+      data_store.delete(key)
+      meta_store.delete(key)
       !(data.nil? || data.empty?)
     end
 
-    # 
     def make_space_for(bytes)
-      # FIXME
+      return true if get_free_space > (bytes * 4)
+
+      keys = []
+      meta_store.each_pair do |key,meta|
+        keys << [key, meta.unpack('G').first]
+      end
+      keys.sort_by!(&:last)
+
+      keys.each do |key,_|
+        delete_entry(key)
+        return true if get_free_space > (bytes * 4) && get_free_ratio > 0.1
+      end
+      return false
     end
 
     # 
-    def touch_entry(entry)
+    def touch_entry(entry, key)
+      meta_store[key] = metadata_pack(entry, Time.now.to_f)
     end
 
     # 
@@ -90,8 +106,13 @@ module Viscacha
       data_store.shm_status[:free_bytes]
     end
 
-    def metadata_pack(entry)
-      [entry.created_at, entry.created_at, entry.expires_in || 0, entry.compressed? ? 1 : 0].pack('GGNC')
+    def get_free_ratio
+      1.0 * data_store.shm_status[:free_bytes] / data_store.shm_status[:total_bytes]
+    end
+
+    def metadata_pack(entry, used_at = nil)
+      used_at ||= entry.created_at
+      [used_at, entry.created_at, entry.expires_in || 0, entry.compressed? ? 1 : 0].pack('GGNC')
     end
 
     def metadata_unpack(meta, data)
