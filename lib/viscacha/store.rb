@@ -6,7 +6,8 @@ module Viscacha
   class Store < ActiveSupport::Cache::Store
     DEFAULT_DIR  = Pathname('/tmp')
     DEFAULT_NAME = 'viscacha'
-    DEFAULT_SIZE = 16.megabytes
+    DEFAULT_SIZE = 16.megabytes # also the minimum size, as localmemcache is
+                                # unreliable below this value
 
     def initialize(options = {})
       super options
@@ -17,7 +18,6 @@ module Viscacha
 
       data_store_options = {
         filename: Pathname.new(directory).join("#{name}-data.lmc").to_s,
-        # size_mb:  [DEFAULT_SIZE, size].max / 1.megabyte
         size_mb:  [DEFAULT_SIZE, size].max / 1.megabyte
       }
       meta_store_options = {
@@ -35,19 +35,26 @@ module Viscacha
       self
     end
 
-    def prune(options = nil)
-    end
-
     def cleanup(options = nil)
+      true
     end
 
     def increment(name, amount = 1, options = nil)
+      raise NotImplementedError.new("#{self.class.name} does not support #{__method__}")
     end
 
     def decrement(name, amount = 1, options = nil)
+      raise NotImplementedError.new("#{self.class.name} does not support #{__method__}")
     end
 
     def delete_matched(matcher, options = nil)
+      raise NotImplementedError.new("#{self.class.name} does not support #{__method__}")
+    end
+
+    def used_at(key)
+      meta = meta_store[key]
+      return nil if meta.nil? || meta.empty?
+      meta.unpack('GGNC').first
     end
 
     protected
@@ -68,40 +75,34 @@ module Viscacha
       data_store[key] = entry.raw_value
       meta_store[key] = metadata_pack(entry)
       true
-    rescue LocalMemCache::MemoryPoolFull
-      # require 'pry' ; require 'pry-nav' ; binding.pry
-      puts '[viscacha] memory pool full, flushing?'
     end
 
     def delete_entry(key, options = {})
-      data = data_store[key]
+      meta = meta_store[key]
       data_store.delete(key)
       meta_store.delete(key)
-      !(data.nil? || data.empty?)
+      !(meta.nil? || meta.empty?)
     end
 
     def make_space_for(bytes)
-      return true if get_free_space > (bytes * 4)
+      return true if get_free_space > (bytes * 2)
 
       keys = []
       meta_store.each_pair do |key,meta|
-        keys << [key, meta.unpack('G').first]
+        keys << [key, meta.unpack('GGNC').first]
       end
-      keys.sort_by!(&:last)
 
-      keys.each do |key,_|
+      keys.sort_by(&:last).each do |key,_|
         delete_entry(key)
-        return true if get_free_space > (bytes * 4) && get_free_ratio > 0.1
+        return true if get_free_space > (bytes * 2) && get_free_ratio > 0.15
       end
       return false
     end
 
-    # 
     def touch_entry(entry, key)
       meta_store[key] = metadata_pack(entry, Time.now.to_f)
     end
 
-    # 
     def get_free_space
       data_store.shm_status[:free_bytes]
     end

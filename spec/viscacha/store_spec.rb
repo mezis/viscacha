@@ -93,6 +93,7 @@ describe Viscacha::Store do
     end
 
     subject { described_class.new directory:'tmp', name:$$, size:16.megabytes }
+    before  { subject.clear }
 
     it 'evicts items' do
       16.times do |index|
@@ -114,14 +115,18 @@ describe Viscacha::Store do
     end
 
     it 'evicts the least recently used item' do
-      subject.write '1', blob(4)
-      subject.write '2', blob(4)
-      subject.write '3', blob(4)
+      subject.write '1', blob(3)
+      # sleep 10e-3
+      subject.write '2', blob(3)
+      # sleep 10e-3
+      subject.write '3', blob(3)
+      # sleep 10e-3
       subject.read '1'
-      subject.write '4', blob(4)
+      # sleep 10e-3
+      subject.write '4', blob(3)
 
-      subject.read("1").class.should eq(String)
-      subject.read("2").class.should eq(NilClass)
+      classes = (1..4).map { |index| subject.read(index.to_s).class }
+      classes.should == [String, NilClass, String, String]
     end
   end
 
