@@ -4,7 +4,7 @@ require 'localmemcache'
 
 module Viscacha
   class Store < ActiveSupport::Cache::Store
-    DEFAULT_DIR  = Pathname('/tmp')
+    DEFAULT_DIR  = Pathname('tmp')
     DEFAULT_NAME = 'viscacha'
     DEFAULT_SIZE = 16.megabytes # also the minimum size, as localmemcache is
                                 # unreliable below this value
