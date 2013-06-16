@@ -3,19 +3,10 @@ require 'viscacha/store'
 require 'pathname'
 
 describe Viscacha::Store do
-  # def cache_file_path
-  #   @cache_file_path ||= Pathname.new("tmp/test.#{$$}.lmc")
-  # end
-  # def remove_cache_file
-  #   return unless cache_file_path.exist?
-  #   cache_file_path.delete
-  # end
-
-  # before { remove_cache_file }
-  # after  { remove_cache_file }
+  NAME = $$
 
   describe 'cache behaviour' do
-    subject { described_class.new directory:'tmp', name:$$ }
+    subject { described_class.new directory:'tmp', name:NAME }
     before  { subject.clear }
 
     describe 'read/write/delete' do
@@ -130,11 +121,55 @@ describe Viscacha::Store do
     end
   end
 
-  describe 'persistence'
+  describe 'persistence' do
+    subject { described_class.new directory:'tmp', name:NAME }
+
+    before do
+      fork do
+        subject.clear
+        subject.write 'foo', 'bar'
+        exit 0
+      end
+      Process.wait
+    end
+
+    it 'can read on-disk data' do
+      subject.read('foo').should == 'bar'
+    end
+  end
 
   describe 'supports concurrency' do
-    # it 'in the same thread'
-    # it 'across multiple threads'
-    # it 'across multiple processes'
+    def cache_factory
+      described_class.new directory:'tmp', name:NAME
+    end
+
+    it 'in the same thread' do
+      cache1 = cache_factory
+      cache2 = cache_factory
+
+      cache1.write('foo', 'bar1')
+      cache2.write('foo', 'bar2')
+      cache1.read('foo').should == 'bar2'
+    end
+
+    it 'across multiple processes' do
+      cache_factory.clear
+      
+      (0..4).each do |process_index|
+        fork do
+          cache = cache_factory
+          (0..99).each do |index|
+            cache.write((index * 5 + process_index).to_s, "cache#{process_index}")
+          end
+          exit 0
+        end
+      end
+      Process.wait
+
+      cache = cache_factory
+      (0..499).each do |index|
+        cache.read(index.to_s).should =~ /cache\d/
+      end
+    end
   end
 end
