@@ -5,6 +5,8 @@ a fast shared memory cache for Rails apps.
 
 **TL;DR**: If you have more workers per machine than machines total, Viscacha may be much more efficient than Memcache. Of course YMMV.
 
+Reads and writes to Viscacha will always be between 10 and **50 times faster than to a Memcache server**.
+
 ### Use cases
 
 If you run an app on few machines with multiple workers, typical for feldging apps hosted on Heroku, you're may already be using Memcache to store fragments and the odd flag.
@@ -20,6 +22,10 @@ Viscacha lets you run an in-process cache that's almost as fast as `ActiveSuppor
 It's not shared across *machines* like Memcache is (it's not a server) but for high worker-per-machine to machine ratio (e.g. 2:2, or 4 workers spread over 2 machines), it's really worth it.
 
 For bigger apps running on few machines (e.g. 12:4 on Amazon's 8-core instances), it's even more efficient, as your cache will effectively be shared by more workers.
+
+### How it works
+
+Viscacha is a fairly thin wrapper around []localmemcache](http://localmemcache.rubyforge.org).
 
 
 ## Installation
@@ -43,6 +49,10 @@ Done!
 
 Use as you'd usually use any other ActiveSupport [cache backend](http://apidock.com/rails/ActiveSupport/Cache/Store), the
 excellent [Dalli](https://github.com/mperham/dalli) for instance.
+
+**CAVEAT**: by design, calling `#clear` on a Viscacha cache (e.g. through `Rails.cache.clear`), or any other write operation (`#delete`, `#write`), will not propagate to workers on other machines!
+
+Be careful to only use `#fetch`, and design accordingly: no cache sweepers, rely on timestamps, IDs, and expiry instead.
 
 
 ## Benchmarks
