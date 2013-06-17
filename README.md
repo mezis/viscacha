@@ -1,4 +1,4 @@
-<h1 style='line-height:1'>
+<h1>
 Viscacha —<br/>
 a fast shared memory cache for Rails apps.
 </h1>
@@ -31,7 +31,7 @@ For bigger apps running on few machines (e.g. 12:4 on Amazon's 8-core instances)
 
 ### How it works
 
-Viscacha is a fairly thin wrapper around []localmemcache](http://localmemcache.rubyforge.org).
+Viscacha is a fairly thin wrapper around [localmemcache](http://localmemcache.rubyforge.org).
 
 
 ## Installation
