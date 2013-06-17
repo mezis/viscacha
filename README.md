@@ -1,39 +1,70 @@
-# Lmc::Store
+<h1 style='line-height:1'>
+Viscacha —<br/>
+a fast shared memory cache for Rails apps.
+</h1>
 
-TODO: Write a gem description
+**TL;DR**: If you have more workers per machine than machines total, Viscacha may be much more efficient than Memcache. Of course YMMV.
+
+### Use cases
+
+If you run an app on few machines with multiple workers, typical for feldging apps hosted on Heroku, you're may already be using Memcache to store fragments and the odd flag.
+
+The roundtrip to Memcache servers is expensive (3-5ms per `fetch` is typical), so it's not much of an advantage over in-memory caching… except you can't afford the memory for a large cache on each worker.
+
+Viscacha lets you run an in-process cache that's almost as fast as `ActiveSupport::MemoryStore`, but
+
+- shared between processes on the same machine (or dyno)
+- persistent (to the extent that the machine keeps files—Heroku will of course not persist your cache across dyno restarts)
+- memory mapped (so it doesn't hijack your low dyno resources)
+
+It's not shared across *machines* like Memcache is (it's not a server) but for high worker-per-machine to machine ratio (e.g. 2:2, or 4 workers spread over 2 machines), it's really worth it.
+
+For bigger apps running on few machines (e.g. 12:4 on Amazon's 8-core instances), it's even more efficient, as your cache will effectively be shared by more workers.
+
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
-    gem 'lmc-store'
+    gem 'viscacha'
 
 And then execute:
 
     $ bundle
+    
+If using Rails, in `config/application.rb`:
 
-Or install it yourself as:
+    config.cache_store = :viscacha
+    
+Done!
 
-    $ gem install lmc-store
 
 ## Usage
 
-TODO: Write usage instructions here
+Use as you'd usually use any other ActiveSupport [cache backend](http://apidock.com/rails/ActiveSupport/Cache/Store), the
+excellent [Dalli](https://github.com/mperham/dalli) for instance.
+
 
 ## Benchmarks
 
 Bear in mind those are microbenchmarks, so your mileage may vary. The bottom
-line is Viscacha will be considerably faster than Memcache in pretty much
-all situations.
+line is that on a single machine, Viscacha will be considerably faster than Memcache in pretty much all situations.
 
-Comparing 5 cache stores using mordern hardware and networking (2.2GHz Core
-i7, gigabit ethernet).
+This compares how 5 cache stores react to repeated `#fetch` calls, using modern hardware and networking (2.2GHz Core i7, running Darwin).
 
-- Viscacha (running locally)
+- Viscacha
 - `ActiveSupport::MemMacheStore` (using the `memcache-client`)
 - `ActiveSupport::DalliStore` (using the `dalli` gem)
-- `ActiveSupport::DalliStore` running off another machine
+- `ActiveSupport::DalliStore` running off another machine (local, 1GBps copper connection)
 - `ActiveSupport::MemoryStore` for reference
+
+in 3 situations
+
+- 100% miss: the key is statistically never present in the cache
+- 100% hit: the key is always present in the cache
+- 50% hit: the key is statistically present in the cache every other call
+
+with two types of data:
 
 30 bytes data (could be a set of flags, numbers, a small serialized object):
 
@@ -77,4 +108,4 @@ i7, gigabit ethernet).
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+5. Create a new Pull Request
