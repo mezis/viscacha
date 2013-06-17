@@ -3,6 +3,12 @@ Viscacha —<br/>
 a fast shared memory cache for Rails apps.
 </h1>
 
+[![Gem Version](https://badge.fury.io/rb/viscacha.png)](http://badge.fury.io/rb/viscacha)
+[![Build Status](https://travis-ci.org/mezis/viscacha.png?branch=master)](https://travis-ci.org/mezis/viscacha)
+[![Dependency Status](https://gemnasium.com/mezis/viscacha.png)](https://gemnasium.com/mezis/viscacha)
+[![Code Climate](https://codeclimate.com/github/mezis/viscacha.png)](https://codeclimate.com/github/mezis/viscacha)
+[![Coverage Status](https://coveralls.io/repos/mezis/viscacha/badge.png)](https://coveralls.io/r/mezis/viscacha)
+
 **TL;DR**: If you have more workers per machine than machines total, Viscacha may be much more efficient than Memcache. Of course YMMV.
 
 Reads and writes to Viscacha will always be between 10 and **50 times faster than to a Memcache server**.
