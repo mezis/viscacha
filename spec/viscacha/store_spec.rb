@@ -1,6 +1,7 @@
 require 'spec_helper'
 require 'viscacha/store'
 require 'pathname'
+require 'securerandom'
 
 describe Viscacha::Store do
   NAME = $$
@@ -43,7 +44,7 @@ describe Viscacha::Store do
       end
 
       it 'caches structured values' do
-        data = { foo:12.34, bar:56, qux:nil }
+        data = { foo: 12.34, bar: 56, qux: nil }
         subject.write('foo', data)
         subject.read('foo').should eq(data)
       end
@@ -83,7 +84,7 @@ describe Viscacha::Store do
       SecureRandom.random_bytes(size_mb.megabytes)
     end
 
-    subject { described_class.new directory:'tmp', name:$$, size:16.megabytes }
+    subject { described_class.new(directory: 'tmp', name: $$, size: 16.megabytes) }
     before  { subject.clear }
 
     it 'evicts items' do

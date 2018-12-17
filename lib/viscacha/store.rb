@@ -91,7 +91,8 @@ module Viscacha
         delete_entry(key)
         return true if get_free_space > (bytes * 2) && get_free_ratio > 0.15
       end
-      return false
+
+      false
     end
 
     def touch_entry(entry, key)
@@ -117,7 +118,7 @@ module Viscacha
       compressed = (compressed == 1)
       expires_in = nil if expires_in == 0
 
-      ActiveSupport::Cache::Entry.create(data, created_at, compressed:compressed, expires_in:expires_in)
+      ActiveSupport::Cache::Entry.create(data, created_at, compressed: compressed, expires_in: expires_in)
     end
   end
 end
