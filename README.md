@@ -5,7 +5,6 @@ a fast shared memory cache for Rails apps.
 
 [![Gem Version](https://badge.fury.io/rb/viscacha.png)](http://badge.fury.io/rb/viscacha)
 [![Build Status](https://travis-ci.org/mezis/viscacha.png?branch=master)](https://travis-ci.org/mezis/viscacha)
-[![Dependency Status](https://gemnasium.com/mezis/viscacha.png)](https://gemnasium.com/mezis/viscacha)
 [![Code Climate](https://codeclimate.com/github/mezis/viscacha.png)](https://codeclimate.com/github/mezis/viscacha)
 [![Coverage Status](https://coveralls.io/repos/mezis/viscacha/badge.png)](https://coveralls.io/r/mezis/viscacha)
 
